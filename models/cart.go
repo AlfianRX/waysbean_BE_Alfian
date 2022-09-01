@@ -4,6 +4,7 @@ import "time"
 
 type Cart struct {
 	ID            int                `json:"id" gorm:"primary_key:auto_increment"`
+	Qty           int                `json:"qty"`
 	SubTotal      int                `json:"subtotal"`
 	UserID        int                `json:"user_id"`
 	User          UserProfileRel     `json:"user"`

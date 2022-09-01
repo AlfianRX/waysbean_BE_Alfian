@@ -3,24 +3,44 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"waysbean_fian/database"
+	"waysbean_fian/pkg/mysql"
+	"waysbean_fian/routes"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 
-	// On Terminal/Command Propt
-	fmt.Println("Hello World!")
+	errEnv := godotenv.Load()
+	if errEnv != nil {
+		panic("Failed to load env file")
+	}
 
-	// On http (API)
+	//. initial DB
+	mysql.DatabaseInit()
+
+	//. run migration
+	database.RunMigration()
+
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello World"))
-	}).Methods("GET")
+	routes.RouteInit(r.PathPrefix("/api/v1").Subrouter())
 
-	fmt.Println("server running localhost:5000")
-	http.ListenAndServe("localhost:5000", r)
+	r.PathPrefix("/uploads").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
+	var port = os.Getenv("PORT")
+
+	//. Setup allowed Header, Method, and Origin for CORS
+	var AllowedHeaders = handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	var AllowedMethods = handlers.AllowedMethods([]string{"GET", "POST", "HEAD", "OPTIONS", "PATCH", "DELETE"})
+	var AllowedOrigins = handlers.AllowedOrigins([]string{"*"})
+
+	fmt.Println("server running localhost:" + port)
+
+	//. Embed the setup allowed in 2 parameter
+	http.ListenAndServe(":"+port, handlers.CORS(AllowedHeaders, AllowedMethods, AllowedOrigins)(r))
 }
